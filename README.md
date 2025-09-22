@@ -1,4 +1,4 @@
-# 🔐 Spring Boot Simple Auth
+# Spring Boot Simple Auth
 
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.6-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://openjdk.java.net/)
@@ -6,339 +6,231 @@
 [![JWT](https://img.shields.io/badge/JWT-Authentication-red.svg)](https://jwt.io/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://docs.docker.com/compose/)
 
-A modern, secure, and production-ready Spring Boot authentication system with JWT (JSON Web Token) implementation. This project provides a complete authentication and authorization solution with role-based access control.
+A modern, secure Spring Boot authentication system using JWT, refresh tokens, and role-based access control.
 
-## ✨ Features
+## Features
 
-### 🔐 Authentication & Security
-- **JWT-based Authentication** - Stateless token-based authentication
-- **BCrypt Password Encryption** - Secure password hashing
-- **Role-based Authorization** - USER and ADMIN roles
-- **CORS Support** - Cross-origin resource sharing enabled
-- **Input Validation** - Comprehensive request validation
+- JWT-based authentication (HS512)
+- Refresh token flow
+- BCrypt password hashing
+- Role-based authorization: USER, ADMIN
+- Stateless security with custom JWT filter
+- CORS enabled
+- Request validation (Jakarta Validation)
 
-### 🏗️ Architecture
-- **Spring Boot 3.5.6** - Latest Spring Boot framework
-- **Spring Security** - Enterprise-grade security
-- **Spring Data JPA** - Database abstraction layer
-- **PostgreSQL** - Robust relational database
-- **Docker Compose** - Containerized development environment
+## Implemented Flows
 
-### 📚 API Documentation
-- **Swagger/OpenAPI** - Interactive API documentation
-- **RESTful APIs** - Clean and intuitive endpoints
-- **Comprehensive Testing** - Built-in test endpoints
+- Register -> Login -> Access with Bearer token
+- Refresh access token via refresh token
+- Logout (current device) and logout from all devices
+- Forgot password -> Reset password via token
+- Change password (with current password)
+- Get current user ("/api/auth/me")
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
-- Java 17 or higher
+- Java 17+
 - Maven 3.6+
-- Docker and Docker Compose
-- PostgreSQL (if running without Docker)
+- Docker & Docker Compose (optional for DB)
 
-### 1. Clone the Repository
-```ssh
-git clone <repository-url>
-cd spring-boot-auth
-```
-
-### 2. Start Database with Docker
-```ssh
+### Start PostgreSQL with Docker
+```bash
 docker-compose up -d
 ```
 
-### 3. Run the Application
-```ssh
-# Using Maven
+### Run the Application
+```bash
 mvn spring-boot:run
-
-# Or build and run JAR
-mvn clean package
-java -jar target/spring-boot-auth-0.0.1-SNAPSHOT.jar
+# or
+mvn clean package && java -jar target/spring-boot-auth-0.0.1-SNAPSHOT.jar
 ```
 
-### 4. Access the Application
-- **Application**: http://localhost:8020
-- **API Documentation**: http://localhost:8020/swagger-ui.html
-- **Database**: localhost:5440
+### Open
+- App: http://localhost:8020
+- Swagger UI: http://localhost:8020/swagger-ui.html
 
-## 📋 API Endpoints
+## Configuration
 
-### 🔓 Authentication Endpoints
-
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | /api/auth/register | User registration | ❌ |
-| POST | /api/auth/login | User login | ❌ |
-| GET | /api/auth/check-username | Check username availability | ❌ |
-
-### 🔒 Protected Endpoints
-
-| Method | Endpoint | Description | Auth Required | Role |
-|--------|----------|-------------|---------------|------|
-| GET | /api/test/hello | Protected hello message | ✅ | Any |
-| GET | /api/test/profile | User profile information | ✅ | Any |
-| GET | /api/test/admin/page | Admin-only page | ✅ | ADMIN |
-| GET | /api/test/user/page | User-only page | ✅ | USER |
-| GET | /api/test/secure | Secure endpoint | ✅ | Any |
-| GET | /api/test/debug | Debug authentication info | ✅ | Any |
-
-## 🔧 Configuration
-
-### Application Properties
+File: src/main/resources/application.properties
 ```properties
-# Server Configuration
 server.port=8020
 spring.application.name=spring-boot-auth
 
-# Database Configuration
 spring.datasource.url=jdbc:postgresql://localhost:5440/db
 spring.datasource.username=user
 spring.datasource.password=password
 
-# JWT Configuration
-jwt.secret=****
-jwt.expiration=86400000
-
-# JPA Configuration
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
+
+jwt.secret=myVeryLongSecretKeyThatIsAtLeast64CharactersLongForHS512AlgorithmSecurity123456789
+jwt.expiration=86400000
 ```
 
-### Docker Configuration
+File: docker-compose.yml
 ```yaml
 version: '3.8'
 services:
   postgres:
     image: postgres:15
     container_name: my_postgres_db2
+    restart: always
     environment:
       POSTGRES_DB: db
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
       - "5440:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+volumes:
+  postgres_data:
 ```
 
-## 📖 Usage Examples
+## API Reference
 
-### 1. User Registration
-```ssh
-curl -X POST http://localhost:8020/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "john_doe",
-    "email": "john@example.com",
-    "password": "securepassword123"
-  }'
-```
+Base URL: http://localhost:8020
 
-### 2. User Login
-```ssh
-curl -X POST http://localhost:8020/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "john_doe",
-    "password": "securepassword123"
-  }'
-```
+### Auth (prefix: /api/auth)
 
-**Response:**
-```json
-{
-  "token": "eyJhbGciOiJIUzUxMiJ9...",
-  "type": "Bearer",
-  "username": "john_doe",
-  "role": "USER"
-}
-```
+- POST /register — Register new user
+  - Body:
+  ```json
+  { "username": "john", "email": "john@example.com", "password": "secret123" }
+  ```
+  - 200 OK -> { message, success }
 
-### 3. Access Protected Endpoint
-```ssh
-curl -X GET http://localhost:8020/api/test/hello \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
+- POST /login — Login with username/password
+  - Body:
+  ```json
+  { "username": "john", "password": "secret123" }
+  ```
+  - 200 OK -> JwtResponse { token, type, username, role }
 
-## 🏗️ Project Structure
+- POST /token/refresh — Get new access token using refresh token
+  - Body:
+  ```json
+  { "refreshToken": "<refresh-token>" }
+  ```
+  - 200 OK -> JwtResponse
 
-```
-src/
-├── main/
-│   ├── java/dev/feruzlabs/springbootauth/
-│   │   ├── configs/           # Configuration classes
-│   │   │   ├── SecurityConfig.java
-│   │   │   └── SwaggerConfig.java
-│   │   ├── controllers/       # REST Controllers
-│   │   │   ├── AuthController.java
-│   │   │   ├── MainController.java
-│   │   │   └── TestController.java
-│   │   ├── dto/              # Data Transfer Objects
-│   │   │   ├── request/
-│   │   │   │   ├── LoginRequest.java
-│   │   │   │   └── RegisterRequest.java
-│   │   │   └── response/
-│   │   │       ├── JwtResponse.java
-│   │   │       └── MessageResponse.java
-│   │   ├── entities/         # JPA Entities
-│   │   │   └── User.java
-│   │   ├── enums/           # Enumerations
-│   │   │   └── Role.java
-│   │   ├── repositories/     # Data Access Layer
-│   │   │   └── UserRepository.java
-│   │   ├── securities/      # Security Components
-│   │   │   ├── JwtAuthenticationFilter.java
-│   │   │   └── JwtUtil.java
-│   │   ├── services/        # Business Logic
-│   │   │   └── AuthService.java
-│   │   └── SpringBootAuthApplication.java
-│   └── resources/
-│       └── application.properties
-└── test/
-    └── java/dev/feruzlabs/springbootauth/
-        └── SpringBootAuthApplicationTests.java
-```
+- POST /logout — Logout from current device (Auth required)
+  - 200 OK -> { message, success }
 
-## 🔒 Security Features
+- POST /logout/all — Logout from all devices (Auth required)
+  - 200 OK -> { message, success }
 
-### JWT Implementation
-- **Stateless Authentication** - No server-side session storage
-- **Token Expiration** - 24-hour token lifetime
-- **HMAC SHA-512** - Strong cryptographic signing
-- **Bearer Token** - Standard Authorization header
+- GET /username/check?username=john — Check username availability
+  - 200 OK -> { message, success }
 
-### Password Security
-- **BCrypt Hashing** - Industry-standard password hashing
-- **Salt Generation** - Automatic salt generation for each password
-- **Minimum Length** - 6 character minimum password requirement
+- POST /password/forget — Initiate password reset (email based)
+  - Body:
+  ```json
+  { "email": "john@example.com" }
+  ```
+  - 200 OK -> Always { message, success }
 
-### Role-Based Access Control
-- **USER Role** - Standard user permissions
-- **ADMIN Role** - Administrative privileges
-- **Method-Level Security** - @PreAuthorize annotations
+- POST /password/reset — Reset password using token
+  - Body:
+  ```json
+  { "token": "<reset-token>", "newPassword": "newSecret123" }
+  ```
+  - 200 OK/400 -> { message, success }
 
-## 🧪 Testing
+- POST /password/change — Change password (Auth required)
+  - Body:
+  ```json
+  { "currentPassword": "secret123", "newPassword": "newSecret123" }
+  ```
+  - 200 OK/400 -> { message, success }
 
-### Manual Testing with Swagger
-1. Navigate to http://localhost:8020/swagger-ui.html
-2. Use the interactive API documentation
-3. Test authentication endpoints
-4. Use the "Authorize" button to set JWT tokens
+- GET /me — Get current user info (Auth required)
+  - 200 OK -> user info object
 
-### API Testing with cURL
-`ash
-# Test registration
-```ssh
-curl -X POST http://localhost:8020/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"testuser","email":"test@example.com","password":"password123"}'
- ```
+### Test (prefix: /api/test)
+- GET /hello — Protected hello (Auth required)
+- GET /profile — Auth info snapshot (Auth required)
+- GET /admin/page — Admin-only (Role ADMIN)
+- GET /user/page — User-only (Role USER)
+- POST /echo — Echo body
+- GET /secure — Secure endpoint (Auth required)
+- GET /debug — Debug authentication data
 
+## Security
 
-# Test login
-```ssh
-curl -X POST http://localhost:8020/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"testuser","password":"password123"}'
-```
+- SecurityConfig:
+  - Disables CSRF for stateless JWT
+  - Permits: /api/auth/**, /swagger-ui/**, /v3/api-docs/**, /
+  - Protects: all other endpoints
+  - Adds JwtAuthenticationFilter before UsernamePasswordAuthenticationFilter
+- JwtAuthenticationFilter:
+  - Reads Authorization: Bearer <token>
+  - Validates token, sets SecurityContext with authorities: ROLE_USER / ROLE_ADMIN
+- Passwords stored with BCrypt
 
-# Test protected endpoint
-```ssh
-curl -X GET http://localhost:8020/api/test/hello \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-`
-```
+## Domain Model
 
-## 🐳 Docker Support
+- User entity: id, username (unique), password, email, role
+- Role enum: USER, ADMIN
 
-### Using Docker Compose
-```ssh
-# Start database
-docker-compose up -d
+## Usage Examples (cURL)
 
-# Stop database
-docker-compose down
-
-# View logs
-docker-compose logs -f
-```
-
-### Database Connection
-- **Host**: localhost
-- **Port**: 5440
-- **Database**: db
-- **Username**: user
-- **Password**: password
-
-## 🔧 Development
-
-### Running in Development Mode
-```ssh
-# Enable development tools
-mvn spring-boot:run -Dspring-boot.run.profiles=dev
-
-# Hot reload with devtools
-mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dspring.devtools.restart.enabled=true"
-```
-
-### Database Management
 ```bash
-# Connect to PostgreSQL
-psql -h localhost -p 5440 -U user -d db
+# Register
+curl -X POST http://localhost:8020/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"john","email":"john@example.com","password":"secret123"}'
 
-# View tables
-\dt
+# Login
+curl -X POST http://localhost:8020/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"john","password":"secret123"}'
+# Save token from response
 
-# View users
-SELECT * FROM users;
+# Access protected
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8020/api/test/hello
+
+# Refresh token
+curl -X POST http://localhost:8020/api/auth/token/refresh \
+  -H "Content-Type: application/json" -d '{"refreshToken":"<REFRESH>"}'
+
+# Change password
+curl -X POST http://localhost:8020/api/auth/password/change \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"currentPassword":"secret123","newPassword":"newSecret123"}'
 ```
 
-## 📝 Dependencies
+## Project Structure
 
-### Core Dependencies
-- **Spring Boot Starter Web** - Web application framework
-- **Spring Boot Starter Security** - Security framework
-- **Spring Boot Starter Data JPA** - Database abstraction
-- **Spring Boot Starter Validation** - Input validation
+```
+src/main/java/dev/feruzlabs/springbootauth/
+├── configs/
+│   ├── SecurityConfig.java
+│   └── SwaggerConfig.java
+├── controllers/
+│   ├── AuthController.java
+│   ├── MainController.java
+│   └── TestController.java
+├── dto/
+│   ├── request/ (LoginRequest, RegisterRequest, Forgot/Reset/ChangePasswordRequest, RefreshTokenRequest)
+│   ├── response/ (JwtResponse, MessageResponse)
+│   └── CurrentUserDTO
+├── entities/ (User)
+├── enums/ (Role)
+├── repositories/ (UserRepository)
+├── securities/ (JwtAuthenticationFilter, JwtUtil)
+├── services/ (AuthService, RefreshTokenService)
+└── SpringBootAuthApplication.java
+```
 
-### Security Dependencies
-- **JJWT API** - JWT token handling
-- **JJWT Implementation** - JWT implementation
-- **JJWT Jackson** - JSON processing
+## Tech Stack
+- Spring Boot, Spring Security, Spring Data JPA
+- PostgreSQL, Docker Compose
+- JJWT (io.jsonwebtoken), Lombok, Springdoc OpenAPI
 
-### Development Dependencies
-- **Spring Boot DevTools** - Development utilities
-- **Lombok** - Code generation
-- **SpringDoc OpenAPI** - API documentation
-- **PostgreSQL Driver** - Database connectivity
+## Contributing
+PRs are welcome: Branch -> PR -> Review -> Merge.
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (git checkout -b feature/amazing-feature)
-3. Commit your changes (git commit -m 'Add some amazing feature')
-4. Push to the branch (git push origin feature/amazing-feature)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👨‍💻 Author
-
-**Feruz Labs**
-- GitHub: [@feruzlabs](https://github.com/feruzlabs)
-
-## 🙏 Acknowledgments
-
-- Spring Boot team for the amazing framework
-- Spring Security team for robust security features
-- JWT.io for token standards
-- PostgreSQL team for the excellent database
-
----
-
-<div align="center">
-  <p>Made with ❤️ by Feruz Labs</p>
-  <p>⭐ Star this repository if you found it helpful!</p>
-</div>
+## License
+MIT (add LICENSE file if needed)
