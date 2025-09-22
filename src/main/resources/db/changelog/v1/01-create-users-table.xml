@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="01-create-users-table" author="developer">
+        <comment>Create users table with all required fields based on User entity</comment>
+
+        <createTable tableName="users">
+            <!-- Primary Key -->
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <!-- Username - unique and required -->
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <!-- Password - required -->
+            <column name="password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Name fields - optional -->
+            <column name="first_name" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+
+            <column name="last_name" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Email - required -->
+            <column name="email" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <!-- Role - enum, default USER -->
+            <column name="role" type="VARCHAR(20)" defaultValue="USER">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Timestamps -->
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="last_login_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Login tracking -->
+            <column name="last_login_ip" type="VARCHAR(45)">
+                <constraints nullable="true"/>
+            </column>
+
+            <!-- Account status - default false (based on your entity) -->
+            <column name="enabled" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+
+            <!-- Security fields -->
+            <column name="failed_login_attempts" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="account_locked_until" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <!-- Indexes for performance -->
+        <createIndex tableName="users" indexName="idx_users_username">
+            <column name="username"/>
+        </createIndex>
+
+        <createIndex tableName="users" indexName="idx_users_email">
+            <column name="email"/>
+        </createIndex>
+
+        <createIndex tableName="users" indexName="idx_users_role">
+            <column name="role"/>
+        </createIndex>
+
+        <createIndex tableName="users" indexName="idx_users_enabled">
+            <column name="enabled"/>
+        </createIndex>
+
+        <createIndex tableName="users" indexName="idx_users_created_at">
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex tableName="users" indexName="idx_users_last_login_at">
+            <column name="last_login_at"/>
+        </createIndex>
+
+        <createIndex tableName="users" indexName="idx_users_account_locked_until">
+            <column name="account_locked_until"/>
+        </createIndex>
+
+        <!-- Check constraint for role enum values -->
+        <sql dbms="postgresql">
+            ALTER TABLE users ADD CONSTRAINT chk_users_role
+                CHECK (role IN ('USER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'))
+        </sql>
+
+        <!-- For MySQL -->
+        <sql dbms="mysql">
+            ALTER TABLE users ADD CONSTRAINT chk_users_role
+                CHECK (role IN ('USER', 'MANAGER', 'ADMIN', 'SUPER_ADMIN'))
+        </sql>
+
+        <!-- Check constraint for failed attempts -->
+        <sql>
+            ALTER TABLE users ADD CONSTRAINT chk_users_failed_attempts
+                CHECK (failed_login_attempts >= 0)
+        </sql>
+
+    </changeSet>
+
+    <!-- Insert default admin user (enabled by default for admin) -->
+    <changeSet id="02-insert-default-admin" author="developer">
+        <comment>Insert default admin user</comment>
+
+        <insert tableName="users">
+            <column name="username" value="admin"/>
+            <!-- BCrypt hash for password "123456" -->
+            <column name="password" value="$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVemIe"/>
+            <column name="first_name" value="System"/>
+            <column name="last_name" value="Administrator"/>
+            <column name="email" value="admin@example.com"/>
+            <column name="role" value="SUPER_ADMIN"/>
+            <column name="enabled" value="true"/>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
+            <column name="failed_login_attempts" value="0"/>
+        </insert>
+
+        <!-- Rollback -->
+        <rollback>
+            <delete tableName="users">
+                <where>username = 'admin'</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+    <!-- Insert test users for development -->
+    <changeSet id="03-insert-test-users" author="developer" context="dev">
+        <comment>Insert test users for development environment</comment>
+
+        <!-- Regular user -->
+        <insert tableName="users">
+            <column name="username" value="user1"/>
+            <column name="password" value="$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVemIe"/> <!-- 123456 -->
+            <column name="first_name" value="John"/>
+            <column name="last_name" value="Doe"/>
+            <column name="email" value="user1@example.com"/>
+            <column name="role" value="USER"/>
+            <column name="enabled" value="true"/>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+
+        <!-- Manager user -->
+        <insert tableName="users">
+            <column name="username" value="manager1"/>
+            <column name="password" value="$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVemIe"/> <!-- 123456 -->
+            <column name="first_name" value="Jane"/>
+            <column name="last_name" value="Smith"/>
+            <column name="email" value="manager1@example.com"/>
+            <column name="role" value="MANAGER"/>
+            <column name="enabled" value="true"/>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+
+        <!-- Disabled user (for testing) -->
+        <insert tableName="users">
+            <column name="username" value="disabled_user"/>
+            <column name="password" value="$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVemIe"/> <!-- 123456 -->
+            <column name="first_name" value="Disabled"/>
+            <column name="last_name" value="User"/>
+            <column name="email" value="disabled@example.com"/>
+            <column name="role" value="USER"/>
+            <column name="enabled" value="false"/>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
+        </insert>
+
+        <rollback>
+            <delete tableName="users">
+                <where>username IN ('user1', 'manager1', 'disabled_user')</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

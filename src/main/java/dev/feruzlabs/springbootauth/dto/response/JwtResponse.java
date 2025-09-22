@@ -9,15 +9,24 @@ import lombok.*;
 @NoArgsConstructor
 public class JwtResponse {
 
-    private String token;
+    private String accessToken;
+    private String refreshToken;
     private String type = "Bearer";
     private String username;
     private String role;
+    private long expiresIn = 86400; // 24 hours in seconds
 
     // Constructors
     public JwtResponse(String token, String username, String role) {
-        this.token = token;
+        this.accessToken = token;
         this.username = username;
         this.role = role;
     }
+    public JwtResponse(String accessToken, String refreshToken, String username, String role) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.username = username;
+        this.role = role;
+    }
+
 }

@@ -1,5 +1,6 @@
 package dev.feruzlabs.springbootauth.securities;
 
+import dev.feruzlabs.springbootauth.dto.CurrentUserDTO;
 import dev.feruzlabs.springbootauth.entities.User;
 import dev.feruzlabs.springbootauth.enums.Role;
 import dev.feruzlabs.springbootauth.repositories.UserRepository;
@@ -24,14 +25,13 @@ import java.util.Optional;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
-    private JwtUtil jwtUtil;
+    private EnhancedJwtUtil jwtUtil;
 
     @Autowired
     private UserRepository userRepository;
 
     // Skip qilinadigan yo'llar
     private final List<String> skipPaths = List.of(
-            "/api/auth",
             "/swagger-ui",
             "/v3/api-docs",
             "/swagger-resources",
@@ -84,12 +84,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (jwtUtil.validateToken(jwt, username)) {
                     logger.info("Token valid, authentication o'rnatilayapti");
                     User user = userOpt.get();
+                    CurrentUserDTO userDTO = CurrentUserDTO.builder().username(user.getUsername()).id(user.getId()).build();
 
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    user.getUsername(),
+                                    userDTO,
                                     null,
-                                    getAuthorities(user.getRole())
+                                    user.getRole().getSimpleGrantedAuthority()
                             );
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
